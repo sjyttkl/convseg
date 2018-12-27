@@ -1,13 +1,13 @@
-from __future__ import print_function
+# from __future__ import print_function
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
 import tensorflow.contrib.crf as crf
 import time
 import codecs
 import os
-import cPickle as pickle
+import pickle
 import numpy as np
-from itertools import izip
+# from itertools import izip
 
 INT_TYPE = np.int32
 FLOAT_TYPE = np.float32
@@ -21,6 +21,7 @@ class Model(object):
         self.scope = scope
         self.sess = sess
 
+    #建立输入图，
     def build_input_graph(self, vocab_size, emb_size, word_vocab_size, word_emb_size, word_window_size):
         """
         Gather embeddings from lookup tables.
@@ -54,11 +55,11 @@ class Model(object):
         if dropout_emb:
             inputs = tf.cond(is_train,
                              lambda: tf.nn.dropout(inputs, 1 - dropout_emb),
-                             lambda: inputs)
+                             lambda: inputs) #这里的tf.cond就是if 和 else操作
 
         hidden_output = inputs
         pre_channels = inputs.get_shape()[-1].value
-        for i in xrange(hidden_layers):
+        for i in range(hidden_layers):
 
             k = kernel_size
             cur_channels = channels[i]
@@ -197,7 +198,7 @@ class Model(object):
             with tf.variable_scope(self.scope, reuse=True):
                 transitions = tf.get_variable('transitions').eval(session=self.sess)
             paths = np.zeros(scores.shape[:2], dtype=INT_TYPE)
-            for i in xrange(scores.shape[0]):
+            for i in range(scores.shape[0]):
                 tag_score, length = scores[i], sequence_lengths[i]
                 if length == 0:
                     continue
@@ -223,7 +224,7 @@ class Model(object):
             'adadelta': tf.train.AdadeltaOptimizer,
             'adam': tf.train.AdamOptimizer,
             'mom': tf.train.MomentumOptimizer
-        }[optimizer_name](*optimizer_options)
+        }[optimizer_name](*optimizer_options) #这一步就是直接进行初始化了 ，因为optimizer_options是list,需要*打开
 
         print('Preparing data...', end='')
         if not os.path.exists(model_dir):
@@ -234,7 +235,7 @@ class Model(object):
 
         # Load character embeddings.
         pre_trained = {}
-        if pre_trained_emb_path and os.path.isfile(pre_trained_emb_path):
+        if pre_trained_emb_path and os.path.isfile(pre_trained_emb_path):#预训练  embeding练模型
             for l in codecs.open(pre_trained_emb_path, 'r', 'utf8'):
                 we = l.split()
                 if len(we) == emb_size + 1:
@@ -243,7 +244,7 @@ class Model(object):
 
         # Load word embeddings.
         pre_trained_word = {}
-        if pre_trained_word_emb_path and os.path.isfile(pre_trained_word_emb_path):
+        if pre_trained_word_emb_path and os.path.isfile(pre_trained_word_emb_path):#预训练字embeding练模型
             for l in codecs.open(pre_trained_word_emb_path, 'r', 'utf8', 'ignore'):
                 we = l.split()
                 if len(we) == word_emb_size + 1:
@@ -252,11 +253,18 @@ class Model(object):
 
         # Load or create mappings.
         if os.path.isfile(mappings_path):
-            item2id, id2item, tag2id, id2tag, word2id, id2word = pickle.load(open(mappings_path, 'r'))
+            print(mappings_path)
+            b = open(mappings_path, 'r',encoding="utf-8")
+            print(b,type(b))
+            item2id, id2item, tag2id, id2tag, word2id, id2word = pickle.load(open(mappings_path, 'rb')) #python3 需要改为 rb
         else:
-            item2id, id2item = create_mapping(create_dic(train_data[0], add_unk=True, add_pad=True))
-            tag2id, id2tag = create_mapping(create_dic(train_data[-1]))
+            # train_data [([word],[word]),([tag],[tag])]
 
+            # print(train_data,type(train_data))
+            b = create_dic(train_data[0], add_unk=True, add_pad=True)#返回每个字的词频，以字典形式保存
+            item2id, id2item = create_mapping(b)#文字和id的映射
+            tag2id, id2tag = create_mapping(create_dic(train_data[-1]))#tag到id的映射
+            #下面的一段代码，很奇怪。
             words = []
             for t in train_data[1:-1]:
                 words.extend(t)
@@ -274,7 +282,7 @@ class Model(object):
                         word_dic[w] = 0
             word2id, id2word = create_mapping(word_dic)
             # Save the mappings to disk.
-            pickle.dump((item2id, id2item, tag2id, id2tag, word2id, id2word), open(mappings_path, 'w'))
+            pickle.dump((item2id, id2item, tag2id, id2tag, word2id, id2word), open(mappings_path, 'wb'))  #python3，需要改为wb
 
         # Hyper parameters.
         word_window_size = len(train_data) - 2
@@ -298,11 +306,11 @@ class Model(object):
         }
 
         if os.path.isfile(parameters_path):
-            parameters_old = pickle.load(open(parameters_path, 'r'))
+            parameters_old = pickle.load(open(parameters_path, 'rb'))
             if parameters != parameters_old:
                 raise Exception('Network parameters are not consistent!')
         else:
-            pickle.dump(parameters, open(parameters_path, 'w'))
+            pickle.dump(parameters, open(parameters_path, 'wb'))
 
         self.item2id = item2id
         self.id2item = id2item
@@ -514,7 +522,7 @@ class Model(object):
                 feed_dict[pl] = v.astype(INT_TYPE)
             scores = self.sess.run(self.scores_op, feed_dict)
             stag_ids = self.inference(scores, seq_lengths)
-            for seq, stag_id, length in izip(data[0], stag_ids, seq_lengths):
+            for seq, stag_id, length in zip(data[0], stag_ids, seq_lengths):
                 output.append((seq, [self.id2tag[t] for t in stag_id[:length]]))
             yield zip(*output)
             output = []
@@ -524,12 +532,13 @@ class Model(object):
         output = []
         for b in self.tag(data_iter):
             output.extend(zip(*b))
-        return zip(*output)
+        return list(zip(*output))
 
 
 ################################################################################
 #                                 DATA UTILS                                   #
 ################################################################################
+#这方法是统计每个字出现的频率
 def create_dic(item_list, add_unk=False, add_pad=False):
     """
     Create a dictionary of items from a list of list of items.
@@ -557,9 +566,9 @@ def create_mapping(items):
     Items are ordered by decreasing frequency.
     """
     if type(items) is dict:
-        sorted_items = sorted(items.items(), key=lambda x: (-x[1], x[0]))
-        id2item = {i: v[0] for i, v in enumerate(sorted_items)}
-        item2id = {v: k for k, v in id2item.items()}
+        sorted_items = sorted(items.items(), key=lambda x: (-x[1], x[0]))# 按照词频从大到小排序，并且返回形式如：（字：词频）
+        id2item = {i: v[0] for i, v in enumerate(sorted_items)} #返回一个每个字：所在的位置，形式如：{0: '<PAD>', 1: '<UNK>', 2: '，', 3: '的', 4: '。'}
+        item2id = {v: k for k, v in id2item.items()}#把上面的形式，key变成value，value变成key
         return item2id, id2item
     elif type(items) is list:
         id2item = {i: v for i, v in enumerate(items)}
@@ -578,7 +587,7 @@ def create_input(batch):
     ret = []
     for d in batch:
         dd = []
-        for seq_id, pos in izip(d, lengths):
+        for seq_id, pos in zip(d, lengths):
             assert len(seq_id) == pos
             pad = [0] * (max_len - pos)
             dd.append(seq_id + pad)
@@ -591,7 +600,7 @@ def data_to_ids(data, mappings):
     """
     Map text data to ids.
     """
-
+    #全角转半角
     def strQ2B(ustring):
         rstring = ""
         for uchar in ustring:
@@ -600,9 +609,9 @@ def data_to_ids(data, mappings):
                 inside_code = 32
             elif 65281 <= inside_code <= 65374:
                 inside_code -= 65248
-            rstring += unichr(inside_code)
+            rstring += chr(inside_code)
         return rstring
-
+    #半角转全角
     def strB2Q(ustring):
         rstring = ""
         for uchar in ustring:
@@ -611,7 +620,7 @@ def data_to_ids(data, mappings):
                 inside_code = 12288
             elif 32 <= inside_code <= 126:
                 inside_code += 65248
-            rstring += unichr(inside_code)
+            rstring += chr(inside_code)
         return rstring
 
     def map(item, mapping):
@@ -625,11 +634,13 @@ def data_to_ids(data, mappings):
             return mapping[item]
         return mapping['<UNK>']
 
-    def map_seq(seqs, mapping):
-        return [[map(item, mapping) for item in seq] for seq in seqs]
+    def map_seq(seqsx, mapping):
+        return [[map(item, mapping) for item in seq] for seq in seqsx]
 
     ret = []
-    for d, m in izip(data, mappings):
+    for d, m in zip(data, mappings):
+        print(np.shape(data),np.shape(mappings))
+        print(np.shape(d),np.shape(m))
         ret.append(map_seq(d, m))
     return tuple(ret)
 
@@ -640,7 +651,7 @@ def data_iterator(inputs, batch_size, shuffle=True, max_length=200):
     """
     assert len(inputs) > 0
     assert all([len(item) == len(inputs[0]) for item in inputs])
-    inputs = zip(*inputs)
+    inputs = list(zip(*inputs))
     if shuffle:
         np.random.shuffle(inputs)
 
@@ -652,11 +663,11 @@ def data_iterator(inputs, batch_size, shuffle=True, max_length=200):
         if len(batch) < bs:
             batch.append(d)
         else:
-            yield zip(*batch)
+            yield list(zip(*batch))
             batch = [d]
             if len(d[0]) < max_length:
                 bs = batch_size
             else:
                 bs = max(1, batch_size * max_length / len(d[0]))
     if batch:
-        yield zip(*batch)
+        yield list(zip(*batch))

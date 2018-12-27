@@ -4,7 +4,8 @@ corpus=$1
 
 export CUDA_VISIBLE_DEVICES=$2
 
-if [ "${corpus}" != "pku" ] && [ "${corpus}" != "msr" ];then
+if [ "${corpus}" != "pku" ] && [ "${corpus}" != "msr" ]
+then
     echo "The first input must be pku or msr!"
     exit
 fi

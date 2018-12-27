@@ -23,7 +23,7 @@ if __name__ == '__main__':
     sys.stdout = FlushFile(sys.stdout)
 
     parser = ArgumentParser()
-    parser.add_argument('--task', dest='task')
+    parser.add_argument('--task', dest='task',default='cws')
     parser.add_argument('--training_path', dest='training_path', default='data/datasets/sighan2005-pku/train.txt')
     parser.add_argument('--dev_path', dest='dev_path', default='data/datasets/sighan2005-pku/dev.txt')
     parser.add_argument('--test_path', dest='test_path', default='data/datasets/sighan2005-pku/test.txt')
@@ -53,15 +53,21 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    TASK = __import__(args.task)
+    TASK = __import__(args.task)  #__import__() 函数用于动态加载类和函数 。
 
+    #这里把每个已经分词后的短语进行 标注为 S B M E
     train_data, dev_data, test_data = (TASK.read_train_file(codecs.open(args.training_path, 'r', 'utf8'), word_window=args.word_window),
                                        TASK.read_train_file(codecs.open(args.dev_path, 'r', 'utf8'), word_window=args.word_window),
                                        TASK.read_train_file(codecs.open(args.test_path, 'r', 'utf8'), word_window=args.word_window))
 
     sess = tf.Session()
     model = Model(TASK.scope, sess)
-
+    # print(train_data)
+    #python3环境下需要转换
+    train_data = list(train_data)#[([],[],[]),([],[],[])]
+    dev_data = list(dev_data)
+    test_data = list(test_data)
+    # print(train_data)
     model.train(train_data=train_data,
                 dev_data=dev_data,
                 test_data=test_data,
@@ -85,7 +91,7 @@ if __name__ == '__main__':
                 eval_batch_size=args.eval_batch_size,
                 print_freq=50,
                 pre_trained_emb_path=args.pre_trained_emb_path,
-                pre_trained_word_emb_path=args.pre_trained_word_emb_path,
+                pre_trained_word_emb_path=args.pre_trained_word_emb_path,  #预训练字embeding练模型
                 fix_word_emb=args.fix_word_emb,
                 reserve_all_word_emb=args.reserve_all_word_emb,
                 max_epoches=args.max_epoches)

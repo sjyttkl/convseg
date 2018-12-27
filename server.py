@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -* 
 from __future__ import print_function
-import StringIO
+from io import StringIO
 from argparse import ArgumentParser
 import tornado.ioloop
 import tornado.web

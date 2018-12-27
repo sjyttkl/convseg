@@ -1,6 +1,7 @@
-from __future__ import print_function
+# from __future__ import print_function
 import os, codecs
-from itertools import izip
+# from itertools import izip
+# from itertools import izip_longest
 from tagger import data_iterator
 
 
@@ -139,9 +140,9 @@ def create_output(seqs, stags):
     Create final output from characters and BMES tags.
     """
     output = []
-    for seq, stag in izip(seqs, stags):
+    for seq, stag in zip(seqs, stags):
         new_sen = []
-        for c, tag in izip(seq, stag):
+        for c, tag in zip(seq, stag):
             new_sen.append(c)
             if tag == 'S' or tag == 'E':
                 new_sen.append('  ')
